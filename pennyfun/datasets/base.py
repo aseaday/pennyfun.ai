@@ -11,6 +11,10 @@ from torch.utils.data import Dataset
 from pennyfun.utils import jload
 
 IGNORE_INDEX = -100
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "</s>"
+DEFAULT_UNK_TOKEN = "</s>"
 
 
 def smart_tokenizer(special_tokens_dict: Dict,
@@ -60,11 +64,12 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        input_ids, labels = tuple(
-            [instance[key] for instance in instances] for key in ("input_ids", "labels"))
+        input_ids, labels = tuple([torch.Tensor(instance[key]).long(
+        ) for instance in instances] for key in ("input_ids", "labels"))
         input_ids = torch.nn.utils.rnn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
         )
+        print(len(input_ids))
         labels = torch.nn.utils.rnn.pad_sequence(
             labels, batch_first=True, padding_value=IGNORE_INDEX)
         return dict(
@@ -86,7 +91,7 @@ class SupervisedDataset(Dataset):
             *make_prompt(x, tokenizer), tokenizer), num_proc=num_proc)["train"]
 
     def __len__(self):
-        return len(self.input_ids)
+        return len(self.data)
 
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
         return dict(input_ids=self.data[i]["input_ids"], labels=self.data[i]["label"])
