@@ -44,7 +44,7 @@ def train():
                                               padding_side="right",
                                               use_fast=False,)
     data_module = get_dataset_and_collator(tokenizer)
-    model = AutoModelForCausalLM.from_pretrained("./bloomz-1b1", torch_dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained("bigscience/bloomz-1b1", torch_dtype=torch.float16)
     model.half()
     trainer = Trainer(model=model, tokenizer=tokenizer,
                       args=training_args, **data_module)
