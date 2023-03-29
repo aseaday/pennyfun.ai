@@ -8,7 +8,7 @@ doc_idx = 0
 for idx in range(len(zh)):
     o_len = len(zh_tmp) + len(en_tmp)
     n_len = len(zh[idx]) + len(en[idx])
-    if o_len + n_len >= 4000:
+    if o_len + n_len >= 2000:
         dataset.append({
             "input": zh_tmp.strip(),
             "output": en_tmp.strip()
@@ -18,5 +18,5 @@ for idx in range(len(zh)):
     else:
         zh_tmp += zh[idx]
         en_tmp += en[idx]
-with open("translation_stack_2048.json", "w+", encoding="utf-8") as f:
+with open("translation_stack_2000.json", "w+", encoding="utf-8") as f:
     json.dump(dataset, f, ensure_ascii=False, indent=4)
