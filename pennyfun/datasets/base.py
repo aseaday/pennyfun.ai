@@ -48,13 +48,14 @@ def preprocess(
 ) -> Dict:
     """Preprocess the data by tokenizing."""
     example = source + target
-    example_tokenized, source_tokenized = [_tokenize_fn(
-        text, tokenizer) for text in (example, source)]
-    input_ids = example_tokenized["input_ids"]
-    label = copy.deepcopy(input_ids)
-    source_len = source_tokenized["input_ids_lens"]
-    label[:source_len] = IGNORE_INDEX
-    return dict(input_ids=input_ids, label=label)
+    return tokenizer(example, truncation=True, max_length=tokenizer.model_max_length)
+    # example_tokenized, source_tokenized = [_tokenize_fn(
+    #     text, tokenizer) for text in (example, source)]
+    # input_ids = example_tokenized["input_ids"]
+    # label = copy.deepcopy(input_ids)
+    # source_len = source_tokenized["input_ids_lens"]
+    # label[:source_len] = IGNORE_INDEX
+    # return dict(input_ids=input_ids, label=label)
 
 
 @dataclass
@@ -84,16 +85,19 @@ class DataCollatorForSupervisedDataset(object):
 class SupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
-    def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer, make_prompt, num_proc=1):
+    def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer, make_prompt=None, accelerator=None, num_proc=1):
         super(SupervisedDataset, self).__init__()
-        logger.warning("Loading data...")
-        dataset = datasets.load_dataset(
-            "json", data_files=data_path, num_proc=1)
-        self.data = dataset.map(lambda x: preprocess(
-            *make_prompt(x, tokenizer), tokenizer), num_proc=num_proc)["train"]
+        with accelerator.main_process_first():
+            dataset = datasets.load_dataset("json", data_files=data_path, num_proc=1)
+            tokenizeddata = dataset.map(lambda x: preprocess(
+                *make_prompt(x, tokenizer), tokenizer), num_proc=num_proc,
+                remove_columns=["input", "output"]
+                )
+            # tokenizeddata = tokenizeddata.rename_column("label", "labels")
+            self.data = tokenizeddata["train"]
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
-        return dict(input_ids=self.data[i]["input_ids"], labels=self.data[i]["label"])
+        return self.data[i]
