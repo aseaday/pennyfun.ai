@@ -29,6 +29,11 @@ def get_dataset_and_collator(tokenizer):
     data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
     return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)
 
+def get_train_dataset(tokenizer, accelerator=None):
+    train_dataset = SupervisedDataset(
+        tokenizer=tokenizer, data_path="translation_stack_2048_sample.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=1)
+    return train_dataset
+
 def get_accelerate_dataloaders(tokenizer, batch_size=1, accelerator=None):
     train_dataset = SupervisedDataset(
         tokenizer=tokenizer, data_path="translation_stack_2048_sample.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=1)
