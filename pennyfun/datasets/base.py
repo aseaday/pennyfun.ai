@@ -87,14 +87,13 @@ class SupervisedDataset(Dataset):
 
     def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer, make_prompt=None, accelerator=None, num_proc=1):
         super(SupervisedDataset, self).__init__()
-        with accelerator.main_process_first():
-            dataset = datasets.load_dataset("json", data_files=data_path, num_proc=1)
-            tokenizeddata = dataset.map(lambda x: preprocess(
-                *make_prompt(x, tokenizer), tokenizer), num_proc=num_proc,
-                remove_columns=["input", "output"]
-                )
-            # tokenizeddata = tokenizeddata.rename_column("label", "labels")
-            self.data = tokenizeddata["train"]
+        dataset = datasets.load_dataset("json", data_files=data_path)
+        tokenizeddata = dataset.map(lambda x: preprocess(
+            *make_prompt(x, tokenizer), tokenizer),
+            num_proc=num_proc,
+            remove_columns=["input", "output"]
+        )
+        self.data = tokenizeddata["train"]
 
     def __len__(self):
         return len(self.data)

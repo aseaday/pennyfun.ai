@@ -29,14 +29,21 @@ def get_dataset_and_collator(tokenizer):
     data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
     return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)
 
+
 def get_train_dataset(tokenizer, accelerator=None):
     train_dataset = SupervisedDataset(
-        tokenizer=tokenizer, data_path="translation_stack_2048_sample.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=1)
+        tokenizer=tokenizer, data_path="translation_stack_2000.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=60)
     return train_dataset
+
+def get_eval_dataset(tokenizer, accelerator=None):
+    eval_dataset = SupervisedDataset(
+        tokenizer=tokenizer, data_path="translation_stack_2000_eval.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=60)
+    return eval_dataset
+
 
 def get_accelerate_dataloaders(tokenizer, batch_size=1, accelerator=None):
     train_dataset = SupervisedDataset(
-        tokenizer=tokenizer, data_path="translation_stack_2048_sample.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=1)
+        tokenizer=tokenizer, data_path="translation_stack_2000.json", make_prompt=make_prompt, accelerator=accelerator, num_proc=60)
     # def collate_fn(examples):
     #     loguru.logger.info(f"examples: {examples}")
     #     return tokenizer.pad(
@@ -47,7 +54,8 @@ def get_accelerate_dataloaders(tokenizer, batch_size=1, accelerator=None):
     #         return_tensors="pt",
     #     )
 
-    collate_fn = transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    collate_fn = transformers.DataCollatorForLanguageModeling(
+        tokenizer, mlm=False)
     # Instantiate dataloaders.
     train_dataloader = DataLoader(
         train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=batch_size, drop_last=True

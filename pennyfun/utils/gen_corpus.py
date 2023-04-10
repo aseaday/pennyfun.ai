@@ -1,7 +1,7 @@
 import json
 dataset = []
-zh = open("/home/aseaday/nmt-corpus/webnovel/train.raw.zh").readlines()
-en = open("/home/aseaday/nmt-corpus/webnovel/train.raw.en").readlines()
+zh = open("/home/envd/data/corpus/nmt-corpus/webnovel/train.raw.zh").readlines()
+en = open("/home/envd/data/corpus/nmt-corpus/webnovel/train.raw.en").readlines()
 zh_tmp = ""
 en_tmp = ""
 doc_idx = 0

@@ -2,7 +2,7 @@ from transformers import Trainer
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 
 class AccelerateTrainer(Trainer):
@@ -10,6 +10,15 @@ class AccelerateTrainer(Trainer):
         self._accelerator = kwargs["accelerator"]
         del kwargs["accelerator"]
         super().__init__(*args, **kwargs)
+    
+    def get_eval_dataloader(self, eval_dataset: Optional[Dataset] = None) -> DataLoader:
+        eval_dataloader = DataLoader(
+            self.eval_dataset, shuffle=False, collate_fn=self.data_collator, 
+            batch_size=self.args.per_device_eval_batch_size, drop_last=False
+        )
+        # for step, batch in enumerate(eval_dataloader):
+        #     self._accelerator.print(step, batch)
+        return self._accelerator.prepare(eval_dataloader)
 
     def get_train_dataloader(self):
         train_dataloader = DataLoader(
@@ -17,21 +26,13 @@ class AccelerateTrainer(Trainer):
             batch_size=self.args.per_device_train_batch_size, drop_last=True
         )
         return self._accelerator.prepare(train_dataloader)
-
+    
+    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+        model = self._accelerator.unwrap_model(self.model)
+        state_dict = model.state_dict()
+        self._save(output_dir, state_dict=state_dict)
+    
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        """
-        Perform a training step on a batch of inputs.
-        Subclass and override to inject custom behavior.
-        Args:
-            model (`nn.Module`):
-                The model to train.
-            inputs (`Dict[str, Union[torch.Tensor, Any]]`):
-                The inputs and targets of the model.
-                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
-                argument `labels`. Check your model's documentation for all accepted arguments.
-        Return:
-            `torch.Tensor`: The tensor with training loss on this batch.
-        """
         model.train()
         inputs = self._prepare_inputs(inputs)
 
@@ -47,3 +48,8 @@ class AccelerateTrainer(Trainer):
 
         self._accelerator.backward(loss)
         return loss.detach()
+    
+    def create_optimizer_and_scheduler(self, num_training_steps: int):
+        super().create_optimizer_and_scheduler(num_training_steps * self._accelerator.num_processes)
+        self.optimizer = self._accelerator.prepare(self.optimizer)
+        self.lr_scheduler = self._accelerator.prepare(self.lr_scheduler)
